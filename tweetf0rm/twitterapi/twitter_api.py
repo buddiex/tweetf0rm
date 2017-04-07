@@ -22,8 +22,7 @@ class TwitterAPI(twython.Twython):
 		Constructor with apikeys, and output folder
 
 		* apikeys: apikeys
-		"""
-		logger.info(kwargs)
+		"""		
 		import copy
 
 		apikeys = copy.copy(kwargs.pop('apikeys', None))
@@ -233,7 +232,7 @@ class TwitterAPI(twython.Twython):
 				timeline.extend(tweets)
 
 				cnt += len(tweets)
-
+               
 				logger.debug('%d > %d ? %s'%(prev_max_id, current_max_id, bool(prev_max_id > current_max_id)))
 
 				time.sleep(1)
@@ -360,6 +359,7 @@ class TwitterAPI(twython.Twython):
 				for tweet in tweets['statuses']:
 					if current_max_id == 0 or current_max_id > long(tweet['id']):
 						current_max_id = long(tweet['id'])
+						# logger.debug(tweet['text'])
 
 				#no new tweets found
 				if (prev_max_id == current_max_id):
@@ -369,11 +369,11 @@ class TwitterAPI(twython.Twython):
 
 				cnt += len(tweets['statuses'])
 
-				#logger.info(cnt)
-
-				logger.debug('%d > %d ? %s'%(prev_max_id, current_max_id, bool(prev_max_id > current_max_id)))
+				logger.info("{} tweets searched sleep for 1 sec".format(cnt))
 
 				time.sleep(1)
+
+				logger.info("continuse... ".format(cnt))
 
 			except twython.exceptions.TwythonRateLimitError:
 				self.rate_limit_error_occured('search', '/search/tweets')

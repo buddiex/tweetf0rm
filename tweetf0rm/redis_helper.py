@@ -54,7 +54,6 @@ class RedisQueue(RedisBase):
 		"""Put item into the queue."""
 		self.conn().rpush(self.key, json.dumps(item))
 
-
 	def get(self, block=True, timeout=None):
 		"""Remove and return an item from the queue. 
 

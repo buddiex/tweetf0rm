@@ -38,7 +38,7 @@ def public_ip():
 
 import hashlib
 def md5(data):
-	return hashlib.md5(data).hexdigest()
+	return hashlib.md5(data.encode("UTF-8")).hexdigest()
 
 def hash_cmd(cmd):
 	return md5(json.dumps(cmd))

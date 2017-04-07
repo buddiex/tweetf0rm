@@ -20,13 +20,11 @@ class CrawlerProcess(mp.Process):
 		self.crawler_id = crawler_id
 		self.redis_config = redis_config
 		#self.queue = mp.Queue(maxsize=MAX_QUEUE_SIZE)
-
 		self.crawler_queue = CrawlerQueue(node_id, crawler_id, redis_config=redis_config)
 		self.crawler_queue.clear()
 		#self.lock = mp.Lock()
 		self.handlers = handlers
-		logger.debug("number of handlers attached: %d"%(len(handlers)))
-
+		logger.debug("{} handlers attached to {}".format(len(handlers),self.crawler_id))
 
 	def get_crawler_id(self):
 		return self.crawler_id
