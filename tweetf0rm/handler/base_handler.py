@@ -30,15 +30,13 @@ class BaseHandler(object):
 		if (bucket not in self.buckets):
 			raise WrongArgs("%s is not a valid buckets..."%bucket)
 
-		logger.debug("adding new data -- into [%s][%s]"%(bucket, key))
+		# logger.debug("adding new data -- into [%s][%s]"%(bucket, key))
 
 		if (key not in self.buffer[bucket]):
 			self.buffer[bucket][key] = list()
-			
 		self.buffer[bucket][key].append(data)
-
-		need_flush = self.need_flush(bucket)
-		logger.debug("flush? %s"%need_flush)
+		need_flush = self.need_flush(bucket, key)
+		# logger.debug("flush? %s"%need_flush)
 		if (need_flush):
 			self.flush(bucket)
 
@@ -66,7 +64,6 @@ class BaseHandler(object):
 
 	def clear(self, bucket = None):
 		if (bucket):
-			logger.debug("clear bucket: %s"%bucket)
 			del self.buffer[bucket]
 			self.buffer[bucket] = dict()
 

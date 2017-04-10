@@ -4,7 +4,7 @@
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(levelname)s-[%(asctime)s][%(module)s][%(funcName)s][%(lineno)d]: %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(levelname)s-[%(asctime)s][%(module)s][%(funcName)s][%(lineno)d]: %(message)s')
 requests_log = logging.getLogger("requests")
 requests_log.setLevel(logging.WARNING)
 
@@ -74,7 +74,7 @@ def tarball_results(data_folder, bucket, output_tarball_foldler, timestamp):
 
 def start_server(config, proxies):
 	import copy
-	
+	config = config.conf
 	check_config(config)
 	config = copy.copy(config)
 
