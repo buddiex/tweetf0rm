@@ -17,7 +17,8 @@ from tweetf0rm.exceptions import InvalidConfig
 from tweetf0rm.redis_helper import NodeQueue, NodeCoordinator
 from tweetf0rm.utils import full_stack, node_id, public_ip
 from tweetf0rm.scheduler import Scheduler
-import time, os, tarfile, concurrent.futures
+# import time, os, tarfile, concurrent.futures
+import time, os, tarfile, futures
 
 def check_config(config):
     if ('apikeys' not in config or 'redis_config' not in config):
@@ -74,7 +75,6 @@ def tarball_results(data_folder, bucket, output_tarball_foldler, timestamp):
 
 def start_server(config, proxies):
     import copy
-    
     check_config(config)
     config = copy.copy(config)
 
@@ -98,8 +98,7 @@ def start_server(config, proxies):
 
     logger.info("output to %s"%(ouput_folder))
     logger.info("archived to %s"%(archive_output))
-    
-    #get public ip as node id	
+
     this_node_id = node_id()
     node_queue = NodeQueue(this_node_id, redis_config=config['redis_config'])
     node_queue.clear()
@@ -117,10 +116,10 @@ def start_server(config, proxies):
     last_archive_ts = time.time() + 3600 # the first archive event starts 2 hrs later... 
     pre_time = time.time()
     last_load_balancing_task_ts = time.time()
-        
+
     while True:
+        
         if (time.time() - pre_time > 120):
-            logger.info("Flushing every 2 mins")
             logger.info(pprint.pformat(scheduler.crawler_status()))
             pre_time = time.time()
             if (scheduler.is_alive()):
@@ -128,8 +127,9 @@ def start_server(config, proxies):
                 scheduler.enqueue(cmd)
 
         if (time.time() - last_archive_ts > 3600):
+
             logger.info("start archive procedure...")
-            with concurrent.futures.ProcessPoolExecutor(max_workers=len(buckets)) as executor:
+            with futures.ProcessPoolExecutor(max_workers=len(buckets)) as executor:
 
                 future_proxies = {executor.submit(tarball_results, ouput_folder, bucket, archive_output, int(time.time()) - 3600): bucket for bucket in buckets}
         
@@ -159,20 +159,20 @@ def start_server(config, proxies):
                 
 
 if __name__=="__main__":
-    parser = argparse.ArgumentParser()
+    # parser = argparse.ArgumentParser()
     # parser.add_argument('-c', '--config', help="config.json that contains a) twitter api keys; b) redis connection string;", required = True)
-    parser.add_argument('-p', '--proxies', help="the proxies.json file")
+    # parser.add_argument('-p', '--proxies', help="the proxies.json file")
 
-    args = parser.parse_args()
-
+    # args = parser.parse_args()
+    # import pdb; pdb.set_trace()
+    conf = config.conf
     proxies = None
-    if args.proxies:
-        with open(os.path.abspath(args.proxies), 'rb') as proxy_f:
+    if config.proxies:
+        with open(os.path.abspath(config.proxies), 'rb') as proxy_f:
             proxies = json.load(proxy_f)['proxies']
 
-    config = config.conf	
     try:
-        start_server(config, proxies)
+        start_server(conf, proxies)
     except KeyboardInterrupt:
         print()
         logger.error('You pressed Ctrl+C!')

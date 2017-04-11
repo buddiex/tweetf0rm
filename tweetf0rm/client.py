@@ -14,6 +14,7 @@ sys.path.append(".")
 from tweetf0rm.redis_helper import NodeQueue, NodeCoordinator
 from tweetf0rm.utils import node_id, public_ip, hash_cmd
 from tweetf0rm.exceptions import NotImplemented
+import config
 
 pp = pprint.PrettyPrinter(indent=4)
  
@@ -144,6 +145,16 @@ def new_cmd(command, args_dict):
 
     return cmd
 
+
+    if (args.command == 'GET_UIDS_FROM_SCREEN_NAMES'):
+        apikeys = config["apikeys"].values()[0]
+        if (not os.path.exists(args.json)):
+            raise Exception("doesn't exist... ")
+        with open(os.path.abspath(args.json), 'rb') as f, open(os.path.abspath(args.output), 'wb') as o_f:
+            screen_names = json.load(f)
+            twitter_api = TwitterAPI(apikeys=apikeys)
+            user_ids = twitter_api.get_user_ids_by_screen_names(screen_names)
+            json.dump(list(user_ids), o_f)
 def cmd(config, args):
     
     if (args.command not in avaliable_cmds):
@@ -173,7 +184,10 @@ def cmd(config, args):
             twitter_api = TwitterAPI(apikeys=apikeys)
             users = twitter_api.get_users(user_ids)
             json.dump(list(users), o_f)
+<<<<<<< HEAD
     #these commands need to go to the server
+=======
+>>>>>>> dev
     elif (args.command.startswith('BATCH_')):
         new_command = args.command.replace('BATCH_', '')
         args_dict = copy.copy(args.__dict__)
@@ -214,59 +228,59 @@ def cmd(config, args):
 
 def print_avaliable_cmd():
     dictionary = {
-        '-uid/--user_id': 'the user id that you want to crawl his/her friends (who he/she is following) or followers',
-        '-tid/--tweet_id': 'the tweet id that you want to fetch',
-        #'-nt/--network_type': 'whether you want to crawl his/her friends or followers',
-        '-dt/--data_type': '"ids" or "users" (default to ids) what the results are going to look like (either a list of twitter user ids or a list of user objects)',
-        '-d/--depth': 'the depth of the network; e.g., if it is 2, it will give you his/her (indicated by the -uid) friends\' friends',
-        '-j/--json': 'a json file that contains a list of screen_names or user_ids, depending on the command',
-        '-o/--output': ' the output json file (for storing user_ids from screen_names)',
-        '-nid/--node_id':'the node_id that you want to interact with; default to the current machine...',
-        '-q/--query': 'the query to search'
+        '-uid, --user_id': 'the user id that you want to crawl his/her friends (who he/she is following) or followers',
+        '-tid, --tweet_id': 'the tweet id that you want to fetch',
+        #'-nt, --network_type': 'whether you want to crawl his/her friends or followers',
+        '-dt, --data_type': '"ids" or "users" (default to ids) what the results are going to look like (either a list of twitter user ids or a list of user objects)',
+        '-d, --depth': 'the depth of the network; e.g., if it is 2, it will give you his/her (indicated by the -uid) friends\' friends',
+        '-j, --json': 'a json file that contains a list of screen_names or user_ids, depending on the command',
+        '-o, --output': ' the output json file (for storing user_ids from screen_names)',
+        '-nid, --node_id':'the node_id that you want to interact with; default to the current machine...',
+        '-q, --query': 'the query to search'
     }
     cmds =  {'CRAWL_FRIENDS': {
-        '-uid/--user_id': dictionary['-uid/--user_id'],
-        #'-nt/--network_type': dictionary['-nt/--network_type'],
-        '-dt/--data_type': dictionary['-dt/--data_type'],
-        '-d/--depth': dictionary['-d/--depth']
+        '-uid, --user_id': dictionary['-uid, --user_id'],
+        #'-nt, --network_type': dictionary['-nt, --network_type'],
+        '-dt, --data_type': dictionary['-dt, --data_type'],
+        '-d, --depth': dictionary['-d, --depth']
     }, 'BATCH_CRAWL_FRIENDS':{
-        '-j/--json': dictionary['-j/--json'],
-        #'-nt/--network_type': dictionary['-nt/--network_type'],
-        '-dt/--data_type': dictionary['-dt/--data_type'],
-        '-d/--depth': dictionary['-d/--depth']
+        '-j, --json': dictionary['-j, --json'],
+        #'-nt, --network_type': dictionary['-nt, --network_type'],
+        '-dt, --data_type': dictionary['-dt, --data_type'],
+        '-d, --depth': dictionary['-d, --depth']
     }, 'CRAWL_FOLLOWERS':{
-        '-uid/--user_id': dictionary['-uid/--user_id'],
-        #'-nt/--network_type': dictionary['-nt/--network_type'],
-        '-dt/--data_type': dictionary['-dt/--data_type'],
-        '-d/--depth': dictionary['-d/--depth']
+        '-uid, --user_id': dictionary['-uid, --user_id'],
+        #'-nt, --network_type': dictionary['-nt, --network_type'],
+        '-dt, --data_type': dictionary['-dt, --data_type'],
+        '-d, --depth': dictionary['-d, --depth']
     }, 'BATCH_CRAWL_FOLLOWERS':{
-        '-j/--json': dictionary['-j/--json'],
-        #'-nt/--network_type': dictionary['-nt/--network_type'],
-        '-dt/--data_type': dictionary['-dt/--data_type'],
-        '-d/--depth': dictionary['-d/--depth']
+        '-j, --json': dictionary['-j, --json'],
+        #'-nt, --network_type': dictionary['-nt, --network_type'],
+        '-dt, --data_type': dictionary['-dt, --data_type'],
+        '-d, --depth': dictionary['-d, --depth']
     }, 'CRAWL_USER_TIMELINE': {
-        '-uid/--user_id': dictionary['-uid/--user_id']
+        '-uid, --user_id': dictionary['-uid, --user_id']
     }, 'CRAWL_TWEET': {
-        '-tid/--tweet_id': dictionary['-tid/--tweet_id']
+        '-tid, --tweet_id': dictionary['-tid, --tweet_id']
     }, 'BATCH_CRAWL_TWEET': {
-        '-j/--json': dictionary['-j/--json']
+        '-j, --json': dictionary['-j, --json']
     }, 'BATCH_CRAWL_USER_TIMELINE': {
-        '-j/--json': dictionary['-j/--json']
+        '-j, --json': dictionary['-j, --json']
     }, 'GET_UIDS_FROM_SCREEN_NAMES': {
-        '-j/--json':  dictionary['-j/--json'],
-        '-o/--output':  dictionary['-o/--output']
+        '-j, --json':  dictionary['-j, --json'],
+        '-o, --output':  dictionary['-o, --output']
     }, 'GET_USERS_FROM_IDS': {
-        '-j/--json':  dictionary['-j/--json'],
-        '-o/--output':  dictionary['-o/--output']
+        '-j, --json':  dictionary['-j, --json'],
+        '-o, --output':  dictionary['-o, --output']
     }, 'LIST_NODES': {
     }, 'SHUTDOWN_NODE': {
-        '-nid/--node_id':  dictionary['-nid/--node_id']
+        '-nid, --node_id':  dictionary['-nid, --node_id']
     }, 'NODE_QSIZES':{
-        '-nid/--node_id':  dictionary['-nid/--node_id']
+        '-nid, --node_id':  dictionary['-nid, --node_id']
     }, 'CLEAR_NODE_QUEUES':{
-        '-nid/--node_id':  dictionary['-nid/--node_id']
+        '-nid, --node_id':  dictionary['-nid, --node_id']
     }, 'SEARCH':{
-        '-q/--query': dictionary['-q/--query']
+        '-q, --query': dictionary['-q, --query']
     }}
     
 
@@ -284,8 +298,8 @@ if __name__=="__main__":
     import json, os
     
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-c', '--config', help="config.json that contains a) twitter api keys; b) redis connection string;", default='config.json')
-    parser.add_argument('-cmd', '--command', help="the cmd you want to run, e.g., \"CRAWL_FRIENDS\"", required=True)
+
+    parser.add_argument('-c', '--command', help="the cmd you want to run, e.g., \"CRAWL_FRIENDS\"", required=True)
     parser.add_argument('-uid', '--user_id', help="the user_id", default=0)
     parser.add_argument('-tid', '--tweet_id', help="the tweet_id", default=0)
     parser.add_argument('-dt', '--data_type', help="the data_type (e.g., 'ids' or 'users'", default='ids')
@@ -297,15 +311,11 @@ if __name__=="__main__":
     
     try:
         args = parser.parse_args()
-
         if args.command == 'HELP':
             print_avaliable_cmd()
             quit()
+        cmd(config.conf, args)
 
-        with open(os.path.abspath(args.config), 'rb') as config_f:
-            config = json.load(config_f)
-
-            cmd(config, args)
     except Exception as exc:
         logger.error(exc)
         print_avaliable_cmd()

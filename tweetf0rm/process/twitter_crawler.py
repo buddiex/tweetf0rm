@@ -35,7 +35,7 @@ class TwitterCrawler(CrawlerProcess):
                 "users": "find_all_followers",
                 "ids": "find_all_follower_ids",
                 "network_type": "followers"
-            }, 
+            },
             "CRAWL_USER_TIMELINE": "fetch_user_timeline",
             "CRAWL_TWEET": "fetch_tweet_by_id",
             "SEARCH": "search_by_query"
@@ -52,7 +52,6 @@ class TwitterCrawler(CrawlerProcess):
         if (self.proxies):
             try:
                 self.client_args['proxies'] = next(self.proxies)['proxy_dict'] # this will throw out 
-                #logger.info("client_args: %s"%json.dumps(self.client_args))
             except StopIteration as exc:
                 raise
             except Exception as exc:
@@ -60,9 +59,6 @@ class TwitterCrawler(CrawlerProcess):
 
         if (self.twitter_api):
             del self.twitter_api
-
-        #crawler_id=self.crawler_id, 
-        self.twitter_api = TwitterAPI(apikeys=self.apikeys, client_args=self.client_args)
 
     def get_handlers(self):
         return self.handlers
@@ -102,18 +98,15 @@ class TwitterCrawler(CrawlerProcess):
                 if (command == 'CRAWL_TWEET'):
                     args = {
                         "tweet_id": cmd['tweet_id'],
-                        "write_to_handlers": self.handlers,
                         "cmd_handlers" : []
                     }
                 elif (command == 'SEARCH'):
                     args = {
-                        "write_to_handlers": self.handlers,
                         "cmd_handlers" : []
                     }
                 else:
                     args = {
                         "user_id": cmd['user_id'],
-                        "write_to_handlers": self.handlers,
                         "cmd_handlers" : []
                     }
 
