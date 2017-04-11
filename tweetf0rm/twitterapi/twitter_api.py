@@ -9,60 +9,31 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import twython
+import twython, tweepy
 import json, os, time
 from tweetf0rm.exceptions import NotImplemented, MissingArgs, WrongArgs
 from tweetf0rm.utils import md5
 
 MAX_RETRY_CNT = 5
 SAVE_THRESHOLD = 400
-class TwitterAPI(twython.Twython):
 
-    def __init__(self, *args, **kwargs):
+class TwitterAPI():
+
+    def __init__(self,write_to_handlers = [], *args, **kwargs  ):
         """
         Constructor with apikeys, and output folder
         * apikeys: apikeys
         """
-        logger.info(kwargs)
         import copy
-
-        apikeys = copy.copy(kwargs.pop('apikeys', None))
+        self.apikeys = copy.copy(kwargs.pop('apikeys', None))
         
-        if not apikeys:
+        if not self.apikeys:
             raise MissingArgs('apikeys is missing')
+        auth = tweepy.OAuthHandler(self.apikeys['app_key'], self.apikeys['app_secret'])
+        auth.set_access_token(self.apikeys['oauth_token'], self.apikeys['oauth_token_secret'] )
+        self.api = tweepy.API(auth,wait_on_rate_limit=True, wait_on_rate_limit_notify=True,*args, **kwargs ) 
+        self.write_to_handlers = write_to_handlers
 
-        self.apikeys = copy.copy(apikeys) # keep a copy
-        #self.crawler_id = kwargs.pop('crawler_id', None)
-
-        oauth2 = kwargs.pop('oauth2', False) # default to use oauth2 (application level access, read-only)
-
-        if oauth2:
-            apikeys.pop('oauth_token')
-            apikeys.pop('oauth_token_secret')
-            twitter = twython.Twython(apikeys['app_key'], apikeys['app_secret'], oauth_version=2)
-            access_token = twitter.obtain_access_token()
-            kwargs['access_token'] = access_token
-            apikeys.pop('app_secret')
-        
-        kwargs.update(apikeys)
-
-        super(TwitterAPI, self).__init__(*args, **kwargs)
-
-        
-
-    def rate_limit_error_occured(self, resource, api):
-        rate_limits = self.get_application_rate_limit_status(resources=[resource])
-
-        #e.g., ['resources']['followers']['/followers/list']['reset']
-
-        wait_for = int(rate_limits['resources'][resource][api]['reset']) - time.time() + 10
-
-        #logger.debug(rate_limits)
-        logger.warn('[%s] rate limit reached, sleep for %d'%(rate_limits['rate_limit_context'], wait_for))
-        if wait_for < 0:
-            wait_for = 60
-
-        time.sleep(wait_for)
 
     def find_all_followers(self, user_id=None, write_to_handlers = [], cmd_handlers=[], bucket="followers"):
 
@@ -70,65 +41,54 @@ class TwitterAPI(twython.Twython):
             raise MissingArgs("user_id cannot be None")
 
         retry_cnt = MAX_RETRY_CNT
-        cursor = -1
-        while cursor != 0 and retry_cnt > 1:
-            try:
-                followers = self.get_followers_list(user_id=user_id, cursor=cursor, count=200)
+        cnt = 0
+        try:
+            for followers in tweepy.Cursor(self.api.followers, screen_name=user_id).pages():  
+                cnt+=len(followers)
+                self.update_handlers(followers, bucket, user_id, cmd_handlers) 
+                logger.debug("saved {} followers... and {} so far...".format(len(followers),cnt))
+                time.sleep(5)
 
-                for handler in write_to_handlers:
-                    handler.append(json.dumps(followers), bucket=bucket, key=user_id) 
+        except twython.exceptions.TwythonRateLimitError:
+            self.rate_limit_error_occured('followers', '/followers/list')
+        except Exception as exc:
+            time.sleep(10)
+            logger.debug("exception: %s"%exc)
+            retry_cnt -= 1
+            if (retry_cnt == 0):
+                raise MaxRetryReached("max retry reached due to %s"%(exc))
                 
-                for handler in cmd_handlers:
-                    handler.append(json.dumps(followers), bucket=bucket, key=user_id) 
-
-                cursor = int(followers['next_cursor'])
-                
-                logger.debug("find #%d followers... NEXT_CURSOR: %d"%(len(followers["users"]), cursor))
-                time.sleep(2)
-            except twython.exceptions.TwythonRateLimitError:
-                self.rate_limit_error_occured('followers', '/followers/list')
-            except Exception as exc:
-                time.sleep(10)
-                logger.debug("exception: %s"%exc)
-                retry_cnt -= 1
-                if (retry_cnt == 0):
-                    raise MaxRetryReached("max retry reached due to %s"%(exc))
-                
-
         logger.debug("finished find_all_followers for %s..."%(user_id))
 
-
-    def find_all_follower_ids(self, user_id=None, write_to_handlers = [], cmd_handlers=[], bucket = "follower_ids"):
+    def update_handlers(self, items, bucket, key, cmd_handlers = []):
+        for handler in self.write_to_handlers:
+            handler.append(items, bucket=bucket, key=user_id)
+        for handler in cmd_handlers:
+            handler.append(items, bucket=bucket, key=user_id)
+        
+    def find_all_follower_ids(self, user_id=None,bucket = "follower_ids", cmd_handlers = []):
 
         if (not user_id):
             raise MissingArgs("user_id cannot be None")
 
         retry_cnt = MAX_RETRY_CNT
         cursor = -1
-        while cursor != 0 and retry_cnt > 1:
-            try:
-                follower_ids = self.get_followers_ids(user_id=user_id, cursor=cursor, count=200)
-
-                for handler in write_to_handlers:
-                    handler.append(json.dumps(follower_ids), bucket=bucket, key=user_id)
-
-                for handler in cmd_handlers:
-                    handler.append(json.dumps(follower_ids), bucket=bucket, key=user_id) 
-
-                cursor = int(follower_ids['next_cursor'])
-
-                logger.debug("find #%d followers... NEXT_CURSOR: %d"%(len(follower_ids["ids"]), cursor))
-                time.sleep(2)
-            except twython.exceptions.TwythonRateLimitError:
-                self.rate_limit_error_occured('followers', '/followers/ids')
-            except Exception as exc:
+        cnt = 0
+        print ('here')
+        try:
+            for follower_ids in tweepy.Cursor(self.api.followers_ids, screen_name=user_id).pages():            
+                cnt+=len(follower_ids)
+                self.update_handlers(follower_ids, bucket, user_id, cmd_handlers) 
+                logger.debug("saved {} followers... and {} so far...".format(len(follower_ids),cnt))
                 time.sleep(5)
-                logger.debug("exception: %s"%exc)
-                retry_cnt -= 1
-                if (retry_cnt == 0):
-                    logger.debug("ending due to %s"%(exc))
-                    raise MaxRetryReached("max retry reached due to %s"%(exc))
 
+        except Exception as exc:
+            time.sleep(5)
+            logger.debug("exception: %s"%exc)
+            retry_cnt -= 1
+            if (retry_cnt == 0):
+                logger.debug("ending due to %s"%(exc))
+                raise MaxRetryReached("max retry reached due to %s"%(exc))
 
         logger.debug("finished find_all_follower_ids for %s..."%(user_id))
 

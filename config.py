@@ -6,6 +6,8 @@ load_dotenv(dotenv_path)
 
 output_folder = "./data"
 
+proxies  = 'tests/proxies.json'
+
 conf = {
 	"apikeys": {
 		"i0mf0rmer01" :{

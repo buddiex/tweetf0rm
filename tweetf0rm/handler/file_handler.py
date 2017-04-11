@@ -20,8 +20,8 @@ def flush_file(output_folder, bucket, items):
         for k, lines in items.iteritems():
             filename = os.path.abspath('%s/%s'%(bucket_folder, k))
             with open(filename, 'ab+') as f:
-                for line in lines:
-                    f.write('%s\n'%line)
+                # for line in lines:
+                    f.write('{}'.format('\n'.join(lines)))
         
             logger.debug("flushed %d lines to %s"%(len(lines), filename))
 
