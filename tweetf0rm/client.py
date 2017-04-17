@@ -62,10 +62,11 @@ avaliable_cmds = {
         },
         'depth': {
             'value': 1,
-        },
-        'bucket': {
-            'value': 'follower_ids'
         }
+        # ,
+        # 'bucket': {
+        #     'value': 'follower_ids'
+        # }
     },
     'BATCH_CRAWL_FOLLOWERS': {
         'user_id' : {
@@ -146,18 +147,9 @@ def new_cmd(command, args_dict):
     return cmd
 
 
-    if (args.command == 'GET_UIDS_FROM_SCREEN_NAMES'):
-        apikeys = config["apikeys"].values()[0]
-        if (not os.path.exists(args.json)):
-            raise Exception("doesn't exist... ")
-        with open(os.path.abspath(args.json), 'rb') as f, open(os.path.abspath(args.output), 'wb') as o_f:
-            screen_names = json.load(f)
-            twitter_api = TwitterAPI(apikeys=apikeys)
-            user_ids = twitter_api.get_user_ids_by_screen_names(screen_names)
-            json.dump(list(user_ids), o_f)
 def cmd(config, args):
     
-    if (args.command not in avaliable_cmds):
+    if args.command not in avaliable_cmds:
         raise Exception("not a valid command...")
 
     nid = args.node_id
@@ -166,47 +158,44 @@ def cmd(config, args):
     node_queue = NodeQueue(nid, redis_config=config['redis_config'])
     node_coordinator = NodeCoordinator(config['redis_config'])
     # this can be done locally without sending the command to the servers...
-    if (args.command == 'GET_UIDS_FROM_SCREEN_NAMES'):
+    if args.json:
+        with open(os.path.abspath(args.json), 'rb') as f:
+            users_list = [id for id in f]
+
+    if args.command == 'GET_UIDS_FROM_SCREEN_NAMES':
         apikeys = config["apikeys"].values()[0]
-        if (not os.path.exists(args.json)):
+        if not os.path.exists(args.json):
             raise Exception("doesn't exist... ")
-        with open(os.path.abspath(args.json), 'rb') as f, open(os.path.abspath(args.output), 'wb') as o_f:
-            screen_names = json.load(f)
+        with open(os.path.abspath(args.output), 'wb') as o_f:
             twitter_api = TwitterAPI(apikeys=apikeys)
-            user_ids = twitter_api.get_user_ids_by_screen_names(screen_names)
+            user_ids = twitter_api.get_user_ids_by_screen_names(users_list)
             json.dump(list(user_ids), o_f)
     elif (args.command == 'GET_USERS_FROM_IDS'):
         apikeys = config["apikeys"].values()[0]
         if (not os.path.exists(args.json)):
             raise Exception("doesn't exist... ")
-        with open(os.path.abspath(args.json), 'rb') as f, open(os.path.abspath(args.output), 'wb') as o_f:
-            user_ids = json.load(f)
+        with open(os.path.abspath(args.output), 'wb') as o_f:
             twitter_api = TwitterAPI(apikeys=apikeys)
-            users = twitter_api.get_users(user_ids)
+            users = twitter_api.get_users(users_list)
             json.dump(list(users), o_f)
-<<<<<<< HEAD
-    #these commands need to go to the server
-=======
->>>>>>> dev
+
     elif (args.command.startswith('BATCH_')):
         new_command = args.command.replace('BATCH_', '')
         args_dict = copy.copy(args.__dict__)
         if (not os.path.exists(args.json)):
             raise Exception("doesn't exist... ")
-        with open(os.path.abspath(args.json), 'rb') as f:
-            if ( args.command == 'BATCH_CRAWL_TWEET' ):
-                tweet_ids = json.load(f)
-                for tweet_id in tweet_ids:
-                    print "Loading Tweet ID: ", tweet_id
-                    args_dict['tweet_id'] = tweet_id
-                    cmd = new_cmd(new_command, args_dict)
-                    node_queue.put(cmd)
-            else:
-                user_ids = json.load(f)
-                for user_id in user_ids:
-                    args_dict['user_id'] = user_id
-                    cmd = new_cmd(new_command, args_dict)
-                    node_queue.put(cmd)
+        if ( args.command == 'BATCH_CRAWL_TWEET' ):
+            for tweet_id in users_list:
+                print "Loading Tweet ID: ", tweet_id
+                args_dict['tweet_id'] = tweet_id
+                cmd = new_cmd(new_command, args_dict)
+                node_queue.put(cmd)
+        else:
+            for user_id in users_list:
+                args_dict['user_id'] = user_id.strip('\n')
+                cmd = new_cmd(new_command, args_dict)
+                logger.info('sending {}'.format(cmd))
+                node_queue.put(cmd)
     elif (args.command == 'LIST_NODES'):
         pp.pprint(node_coordinator.list_nodes())
     elif (args.command == 'NODE_QSIZES'):
@@ -314,8 +303,11 @@ if __name__=="__main__":
         if args.command == 'HELP':
             print_avaliable_cmd()
             quit()
+
         cmd(config.conf, args)
 
     except Exception as exc:
         logger.error(exc)
-        print_avaliable_cmd()
+        import traceback
+        traceback.print_exc()
+        # print_avaliable_cmd()

@@ -51,7 +51,7 @@ class TwitterCrawler(CrawlerProcess):
     def init_twitter_api(self): # this will throw StopIteration if all proxies have been tried...
         if (self.proxies):
             try:
-                self.client_args['proxies'] = next(self.proxies)['proxy_dict'] # this will throw out 
+                self.client_args['proxy'] = next(self.proxies)['proxy_dict']# this will throw out 
             except StopIteration as exc:
                 raise
             except Exception as exc:
@@ -59,6 +59,7 @@ class TwitterCrawler(CrawlerProcess):
 
         if (self.twitter_api):
             del self.twitter_api
+        self.twitter_api = TwitterAPI(write_to_handlers = self.handlers, apikeys=self.apikeys, **self.client_args)
 
     def get_handlers(self):
         return self.handlers
