@@ -13,7 +13,6 @@ from tweetf0rm.exceptions import NotImplemented
 
 class MongoDBHandler(object):
 
-	def __init__(self):
-		raise NotImplemented("placeholder, not implemented yet...")
+    def __init__(self):
+        raise NotImplemented("placeholder, not implemented yet...")
 
-	

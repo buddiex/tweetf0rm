@@ -1,9 +1,10 @@
 from .inmemory_handler import InMemoryHandler
 from .file_handler import FileHandler
+from .oracle_handler import OracleHandler
 import tweetf0rm.handler
 import copy
 
-__all__ = ["InMemoryHandler", "FileHandler"]
+__all__ = ["InMemoryHandler", "FileHandler", "OracleHandler"]
 avaliable_handlers = copy.copy(__all__)
 
 
@@ -20,6 +21,7 @@ def create_handler(handler_config=None):
 
 def create_handlers(handler_configs=None):
     handlers = []
-    for handler_config in handler_configs:
-        handlers.append(create_handler(handler_config))
+    for k, v in handler_configs.items():
+        if v['active']:
+            handlers.append(create_handler(v))
     return handlers

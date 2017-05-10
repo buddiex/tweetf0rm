@@ -15,6 +15,7 @@ from tweetf0rm.redis_helper import NodeQueue, NodeCoordinator
 from tweetf0rm.utils import node_id, public_ip, hash_cmd
 from tweetf0rm.exceptions import NotImplemented
 import config
+from tweetf0rm.handler.oracle_handler import OracleHandler
 
 pp = pprint.PrettyPrinter(indent=4)
  
@@ -157,45 +158,49 @@ def cmd(config, args):
     logger.info("node_id: %s"%(nid))
     node_queue = NodeQueue(nid, redis_config=config['redis_config'])
     node_coordinator = NodeCoordinator(config['redis_config'])
-    # this can be done locally without sending the command to the servers...
-    if args.json:
-        with open(os.path.abspath(args.json), 'rb') as f:
-            users_list = [id for id in f]
-
+    # if args.json:
+    #     if not os.path.exists(args.json):
+    #         raise Exception("doesn't exist... ")
+    #     with open(os.path.abspath(args.json), 'rb') as f:
+    #          users_list = (id for id in f)
+    db = OracleHandler()
+    users_list = db.getUsers()
+    # these can be done locally without sending the command to the servers...
     if args.command == 'GET_UIDS_FROM_SCREEN_NAMES':
         apikeys = config["apikeys"].values()[0]
-        if not os.path.exists(args.json):
-            raise Exception("doesn't exist... ")
         with open(os.path.abspath(args.output), 'wb') as o_f:
             twitter_api = TwitterAPI(apikeys=apikeys)
             user_ids = twitter_api.get_user_ids_by_screen_names(users_list)
             json.dump(list(user_ids), o_f)
-    elif (args.command == 'GET_USERS_FROM_IDS'):
+    elif args.command == 'GET_USERS_FROM_IDS':
         apikeys = config["apikeys"].values()[0]
-        if (not os.path.exists(args.json)):
-            raise Exception("doesn't exist... ")
+
         with open(os.path.abspath(args.output), 'wb') as o_f:
             twitter_api = TwitterAPI(apikeys=apikeys)
             users = twitter_api.get_users(users_list)
             json.dump(list(users), o_f)
 
-    elif (args.command.startswith('BATCH_')):
+    elif args.command.startswith('BATCH_'):
         new_command = args.command.replace('BATCH_', '')
         args_dict = copy.copy(args.__dict__)
-        if (not os.path.exists(args.json)):
-            raise Exception("doesn't exist... ")
-        if ( args.command == 'BATCH_CRAWL_TWEET' ):
+
+        if args.command == 'BATCH_CRAWL_TWEET':
             for tweet_id in users_list:
                 print "Loading Tweet ID: ", tweet_id
                 args_dict['tweet_id'] = tweet_id
                 cmd = new_cmd(new_command, args_dict)
                 node_queue.put(cmd)
         else:
+            n = 0
             for user_id in users_list:
-                args_dict['user_id'] = user_id.strip('\n')
+                args_dict['user_id'] = user_id
                 cmd = new_cmd(new_command, args_dict)
                 logger.info('sending {}'.format(cmd))
                 node_queue.put(cmd)
+                if n == 1000:
+                    break
+                n +=1
+
     elif (args.command == 'LIST_NODES'):
         pp.pprint(node_coordinator.list_nodes())
     elif (args.command == 'NODE_QSIZES'):

@@ -1,0 +1,10 @@
+docker run -d -p 8080:8080 -p 1521:1521 -v /my/oracle/data:/u01/app/oracle -e DBCA_TOTAL_MEMORY=1024 sath89/oracle-12c
+docker run -d -e WEB_CONSOLE=false -p 1520:1521 -v /my/oracle/data:/u01/app/oracle sath89/oracle-12c
+
+
+hostname: localhost
+port: 1521
+sid: xe
+service name: xe.oracle.docker
+username: system
+password: oracle

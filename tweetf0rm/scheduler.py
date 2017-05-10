@@ -2,18 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-import logging
-
-logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
-# requests_log = logging.getLogger("requests")
-# requests_log.setLevel(logging.WARNING)
 
 import copy, time
 from tweetf0rm.utils import full_stack, get_keys_by_min_value, format_proxy_list
 from tweetf0rm.proxies import proxy_checker
 from process.twitter_crawler import TwitterCrawler
-from handler import create_handler
+from tweetf0rm import logger
+from handler import create_handlers
 from tweetf0rm.redis_helper import NodeCoordinator, CrawlerQueue
 from operator import itemgetter
 
@@ -47,7 +42,7 @@ class Scheduler(object):
             try:
                 self.new_crawler(self.node_id, self.config['apikeys'][apikey_list[idx]], config)
             except Exception as exc:
-                logger.error(exc.message + ' for app {}'.format(apikey_list[idx]))
+                logger.error(exc.message + ' for app {}, {}'.format(apikey_list[idx], full_stack()))
                 full_stack()
 
         self.node_coordinator = NodeCoordinator(config['redis_config'])
@@ -59,13 +54,13 @@ class Scheduler(object):
 
         crawler_id = apikeys['app_key']
         logger.info('creating a new crawler: %s' % crawler_id)
-        if (not crawler_proxies):
+        if not crawler_proxies:
             crawler_proxies = next(self.proxy_generator) if self.proxy_generator else None
 
-        crawler = TwitterCrawler(node_id, crawler_id, copy.copy(apikeys), handlers=[create_handler(handler)],
+        crawler = TwitterCrawler(node_id, crawler_id, copy.copy(apikeys), handlers=create_handlers(handler),
                                  redis_config=copy.copy(config['redis_config']), proxies=crawler_proxies)
 
-        if (crawler_id in self.crawlers):
+        if crawler_id in self.crawlers:
             # self.crawlers[crawler_id].clear()
             del self.crawlers[crawler_id]
 
@@ -75,6 +70,7 @@ class Scheduler(object):
             'crawler_queue': CrawlerQueue(self.node_id, crawler_id, redis_config=copy.copy(config['redis_config'])),
             'crawler_proxies': crawler_proxies
         }
+
         crawler.start()
 
     def is_alive(self):
@@ -85,19 +81,20 @@ class Scheduler(object):
         status = []
         for crawler_id in self.crawlers:
             cc = self.crawlers[crawler_id]
-            if ((not cc['crawler'].is_alive())):
+            if not cc['crawler'].is_alive():
 
-                if ('retry_timer_start_ts' in cc and (time.time() - cc['retry_timer_start_ts'] > 1800)):
-                    # retry 30 mins after the crawler dies... mostly the crawler died because "Twitter API returned a 503 (Service Unavailable), Over capacity"
+                if 'retry_timer_start_ts' in cc and (time.time() - cc['retry_timer_start_ts'] > 1800):
+                    # retry 30 mins after the crawler dies... mostly the crawler died because
+                    # "Twitter API returned a 503 (Service Unavailable), Over capacity"
                     self.new_crawler(self.node_id, cc['apikeys'], self.config, cc['crawler_proxies'])
                     cc = self.crawlers[crawler_id]
-                    logger.info('[%s] has been recrated...' % (crawler_id))
+                    logger.info('[%s] has been recreated...' % crawler_id)
                 else:
-                    if ('retry_timer_start_ts' not in cc):
+                    if 'retry_timer_start_ts' not in cc:
                         cc['retry_timer_start_ts'] = int(time.time())
                     else:
-                        logger.warn('[%s] failed; waiting to recreat in %f mins...' % (
-                        crawler_id, (time.time() + 1800 - cc['retry_timer_start_ts']) / float(60)))
+                        logger.warn('[%s] failed; waiting to recreate in %f mins...' % (
+                            crawler_id, (time.time() + 1800 - cc['retry_timer_start_ts']) / float(60)))
 
             status.append(
                 {'crawler_id': crawler_id, 'alive?': cc['crawler'].is_alive(), 'qsize': cc['crawler_queue'].qsize(),
@@ -116,8 +113,8 @@ class Scheduler(object):
         min_crawler_id, min_qsize = sorted_queues[0]
         logger.info("crawler with max_qsize: %s (%d)" % (max_crawler_id, max_qsize))
         logger.info("crawler with min_qsize: %s (%d)" % (min_crawler_id, min_qsize))
-        logger.info("max_qsize - min_qsize > 0.5 * min_qsize ?: %r" % ((max_qsize - min_qsize > 0.5 * min_qsize)))
-        if (max_qsize - min_qsize > 0.5 * min_qsize):
+        logger.info("max_qsize - min_qsize > 0.5 * min_qsize ?: %r" % (max_qsize - min_qsize > 0.5 * min_qsize))
+        if max_qsize - min_qsize > 0.5 * min_qsize:
             logger.info("load balancing process started...")
             cmds = []
             controls = []
@@ -137,13 +134,13 @@ class Scheduler(object):
                 self.enqueue(cmd)
 
     def redistribute_crawler_queue(self, crawler_id):
-        if (crawler_id in self.crawlers):
+        if crawler_id in self.crawlers:
             logger.warn('%s just failed... redistributing its workload' % (crawler_id))
             try:
                 self.node_coordinator.distribute_to_nodes(self.crawlers[crawler_id]['crawler_queue'])
                 wait_timer = 180
                 # wait until it dies (flushed all the data...)
-                while (self.crawlers[crawler_id]['crawler'].is_alive() and wait_timer > 0):
+                while self.crawlers[crawler_id]['crawler'].is_alive() and wait_timer > 0:
                     time.sleep(60)
                     wait_timer -= 60
 
@@ -155,13 +152,13 @@ class Scheduler(object):
 
     def enqueue(self, cmd):
 
-        if (cmd['cmd'] == 'TERMINATE'):
+        if cmd['cmd'] == 'TERMINATE':
             [self.crawlers[crawler_id]['crawler_queue'].put(cmd) for crawler_id in self.crawlers]
-        elif (cmd['cmd'] == 'CRAWLER_FLUSH'):
+        elif cmd['cmd'] == 'CRAWLER_FLUSH':
             [self.crawlers[crawler_id]['crawler_queue'].put(cmd) for crawler_id in self.crawlers]
-        elif (cmd['cmd'] == 'BALANCING_LOAD'):
+        elif cmd['cmd'] == 'BALANCING_LOAD':
             self.balancing_load()
-        elif (cmd['cmd'] == 'CRAWLER_FAILED'):
+        elif cmd['cmd'] == 'CRAWLER_FAILED':
             crawler_id = cmd['crawler_id']
             self.redistribute_crawler_queue(crawler_id)
         else:
@@ -169,7 +166,6 @@ class Scheduler(object):
             for crawler_id, qsize in self.sorted_local_queue(False):
                 if self.crawlers[crawler_id]['crawler'].is_alive():
                     self.crawlers[crawler_id]['crawler_queue'].put(cmd)
-
                     logger.debug("pushed %s to crawler: %s" % (cmd, crawler_id))
                     break
 

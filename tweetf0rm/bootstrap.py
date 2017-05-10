@@ -14,6 +14,7 @@ from tweetf0rm.utils import full_stack, node_id, check_config, archive
 
 sys.path.append(".")
 
+
 def start_server(config, proxies):
     import copy
     check_config(config)
@@ -61,13 +62,12 @@ def start_server(config, proxies):
         if cmd:
             scheduler.enqueue(cmd)
 
+
 def main():
     # parser = argparse.ArgumentParser()
     # parser.add_argument('-c', '--config', help="config.json that contains a) twitter api keys; b) redis connection string;", required = True)
     # parser.add_argument('-p', '--proxies', help="the proxies.json file")
-
     # args = parser.parse_args()
-    # import pdb; pdb.set_trace()
     conf = config.conf
     proxies = None
     if config.proxies:
@@ -85,7 +85,6 @@ def main():
         logger.error(full_stack())
     finally:
         pass
-
 
 
 if __name__ == "__main__":

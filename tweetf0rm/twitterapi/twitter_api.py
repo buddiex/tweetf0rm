@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 import twython, tweepy
 import json, time
 from tweetf0rm.exceptions import MissingArgs, MaxRetryReached
-from tweetf0rm.utils import md5
+from tweetf0rm.utils import md5, full_stack
 
 MAX_RETRY_CNT = 5
 SAVE_THRESHOLD = 400
@@ -42,7 +42,6 @@ class TwitterAPI():
             for handler in cmd_handlers:
                 handler.append(items, bucket=bucket, key=user_id)
 
-
     def find_all_followers(self, user_id=None, cmd_handlers=[], bucket="followers"):
         
         if not user_id:
@@ -56,18 +55,21 @@ class TwitterAPI():
                 cnt += len(followers_id)
                 logger.info("followers id gotten {}-- total {}".format(len(followers_id), cnt))
                 pos = 0
-                while pos+100 <= len(followers_id):
+                screen_names_list = []
+                while pos + 100 <= len(followers_id):
                     batch_followers = self.api.lookup_users(user_ids=followers_id[pos:pos+100])
                     cnt2 += len(batch_followers)
                     batch_followers_list = [bf._json for bf in batch_followers]
+                    screen_names_list.extend([bf['screen_name'] for bf in batch_followers_list])
+                    logger.info("{} followers".format(cnt2))
                     self.update_handlers(batch_followers_list, bucket, user_id, cmd_handlers)
-                    logger.info("users object gotten {}-- total {}".format(len(batch_followers), cnt2))
-                    pos+=100
-                self.update_handlers(followers_id, 'follower_ids', user_id, cmd_handlers)
+                    pos += 100
+                self.update_handlers(screen_names_list, 'follower_ids', user_id, cmd_handlers)
                 time.sleep(1)
         except Exception as exc:
-            time.sleep(10)
             logger.debug("exception: %s" % exc)
+            logger.debug(full_stack())
+            time.sleep(10)
             retry_cnt -= 1
             if retry_cnt == 0:
                 raise MaxRetryReached("max retry reached due to %s" % exc)
@@ -84,7 +86,7 @@ class TwitterAPI():
         cnt = 0
         try:
             for follower_ids in tweepy.Cursor(self.api.followers_ids, screen_name=user_id).pages():
-                cnt+=len(follower_ids)
+                cnt += len(follower_ids)
                 self.update_handlers(follower_ids, bucket, user_id, cmd_handlers)                 
                 logger.debug(" {} followers... and {} so far... now sleeping for 10sec".format(len(follower_ids),cnt))
                 time.sleep(10)
@@ -92,7 +94,7 @@ class TwitterAPI():
         except Exception as exc:
             import traceback
             time.sleep(5)
-            logger.error("exception: %s"%exc)
+            logger.error("exception: from here %s"% exc)
             retry_cnt -= 1
             if (retry_cnt == 0):
                 logger.error("ending due to %s"%(exc))
@@ -183,18 +185,18 @@ class TwitterAPI():
                 cnt += len(statuses)
                 for tweet in statuses:
                     timeline.append(tweet._json)
-                logger.info( "...{} tweets downloaded for {}" % (cnt, user_id))
+                logger.info("...{} tweets downloaded for {}".format(cnt, user_id))
             time.sleep(1)
 
         except Exception as exc:
             time.sleep(10)
-            logger.debug("exception: %s"%exc)
+            logger.debug("exception: {}".format(exc))
             retry_cnt -= 1
-            if (retry_cnt == 0):
-                raise MaxRetryReached("max retry reached due to %s"%(exc))
+            if retry_cnt == 0:
+                raise MaxRetryReached("max retry reached due to {}".format(exc))
 
         self.update_handlers(timeline, bucket, user_id, cmd_handlers)
-        logger.info("[%s] total tweets: %d "%(user_id, cnt))
+        logger.info("done for [%s] total tweets: %d "%(user_id, cnt))
 
     def fetch_tweet_by_id(self, tweet_id = None, write_to_handlers=[], cmd_handlers=[], bucket="tweets"):
 

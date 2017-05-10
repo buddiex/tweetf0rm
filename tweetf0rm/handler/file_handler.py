@@ -3,11 +3,12 @@
 '''
 file_handler.py: handler that's collects the data, and write to the disk on a separate thread;
 '''
-
+import os
 import logging
+import json
+import config
 from .base_handler import BaseHandler
 import concurrent.futures as futures
-import os
 from tweetf0rm.utils import full_stack
 
 logger = logging.getLogger(__name__)
@@ -19,9 +20,13 @@ def flush_file(output_folder, bucket, items):
 
         for k, lines in items.iteritems():
             filename = os.path.abspath('%s/%s' % (bucket_folder, k))
-            with open(filename, 'ab+') as f:
-                # for line in lines:
-                f.write('\n'.join(map(str, lines)))
+            with open(filename, 'ab+') as outfile:
+                for line in lines:
+                    json.dump(line, outfile)
+                    outfile.write('\n')
+
+                # f.write('\n'.join(map(str, lines)))
+
 
             logger.info("flushed %d lines to %s" % (len(lines), filename))
     except:
@@ -29,12 +34,12 @@ def flush_file(output_folder, bucket, items):
     return True
 
 
-flush_size = {"tweets": 1000, "followers": 1000, "follower_ids": 4999, "friends": 1000, "friend_ids": 5000,
+flush_size = {"tweets": 1000, "followers": 1000, "follower_ids": 1000, "friends": 1000, "friend_ids": 1000,
               "timelines": 1}
 
 
 class FileHandler(BaseHandler):
-    def __init__(self, output_folder):
+    def __init__(self, output_folder=config.OUT_FOLDER):
         super(FileHandler, self).__init__()
         self.output_folder = os.path.abspath(output_folder)
         if not os.path.exists(self.output_folder):

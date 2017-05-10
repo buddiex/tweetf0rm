@@ -11,6 +11,9 @@ import requests, json, traceback, sys
 import hashlib
 
 
+
+
+
 def check_config(config):
     if 'apikeys' not in config or 'redis_config' not in config:
         raise InvalidConfig('something is wrong with your config file... you have to have redis_config and apikeys')
