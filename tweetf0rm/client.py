@@ -158,13 +158,13 @@ def cmd(config, args):
     logger.info("node_id: %s"%(nid))
     node_queue = NodeQueue(nid, redis_config=config['redis_config'])
     node_coordinator = NodeCoordinator(config['redis_config'])
-    # if args.json:
-    #     if not os.path.exists(args.json):
-    #         raise Exception("doesn't exist... ")
-    #     with open(os.path.abspath(args.json), 'rb') as f:
-    #          users_list = (id for id in f)
-    db = OracleHandler()
-    users_list = db.getUsers()
+    if args.json:
+         if not os.path.exists(args.json):
+             raise Exception("doesn't exist... ")
+         with open(os.path.abspath(args.json), 'rb') as f:
+              users_list = (id for id in f)
+    #db = OracleHandler()
+    #users_list = db.getUsers()
     # these can be done locally without sending the command to the servers...
     if args.command == 'GET_UIDS_FROM_SCREEN_NAMES':
         apikeys = config["apikeys"].values()[0]
@@ -172,6 +172,7 @@ def cmd(config, args):
             twitter_api = TwitterAPI(apikeys=apikeys)
             user_ids = twitter_api.get_user_ids_by_screen_names(users_list)
             json.dump(list(user_ids), o_f)
+
     elif args.command == 'GET_USERS_FROM_IDS':
         apikeys = config["apikeys"].values()[0]
 
@@ -217,8 +218,6 @@ def cmd(config, args):
         cmd = new_cmd(args.command, args_dict)
         node_queue.put(cmd)
         logger.info('sent [%s]'%(cmd))
-
-    
 
 def print_avaliable_cmd():
     dictionary = {

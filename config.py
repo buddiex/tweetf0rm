@@ -11,6 +11,9 @@ load_dotenv(dotenv_path)
 proxies = join(basedir, 'scripts', 'proxies.json')
 OUT_FOLDER = join(basedir, 'data')
 ARCHIVE_FOLDER = join(basedir, 'data', 'archive')
+MODELS_FOLDER = join(basedir, 'data', 'models')
+W2V_PRETRAINED_TWITTER_MODEL = join(basedir, 'data', 'models', 'w2v.twitter.27B.{}d.txt')
+
 LOG_FILE = join(basedir, 'smapp.log')
 DB_NAME = "smdb"
 TWITTER_HANDLE = 'gtbank'
@@ -18,7 +21,6 @@ TWITTER_HANDLE = 'gtbank'
 # ORACLE_PASSWORD = "Analytics!23"
 # ORACLE_DSN = '(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=10.3.6.51)(PORT=1521)))' \
 #              '(CONNECT_DATA=(service_name=analyse.gtbank.com)))'
-
 
 ORACLE_USER = "system"
 ORACLE_PASSWORD = "oracle"
