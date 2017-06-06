@@ -6,12 +6,15 @@ file_handler.py: handler that's collects the data, and write to the disk on a se
 import json
 import cx_Oracle
 import dateutil.parser as dateparser
-from tweetf0rm import logger
+import logging
 from .base_handler import BaseHandler
 from .file_handler import FileHandler
 import concurrent.futures as futures
 from tweetf0rm.utils import full_stack
 import config
+
+
+logger = logging.getLogger(__name__)
 
 try:
     ora_conn = cx_Oracle.connect(user=config.ORACLE_USER, password=config.ORACLE_PASSWORD, dsn=config.ORACLE_DSN)

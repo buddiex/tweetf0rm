@@ -9,3 +9,4 @@ cx_Oracle
 tweepy
 sqlalchemy
 pandas
+sh

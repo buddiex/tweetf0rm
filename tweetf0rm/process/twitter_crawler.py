@@ -132,8 +132,8 @@ class TwitterCrawler(CrawlerProcess):
                     data_type = cmd['data_type']
 
                     try:
-                        depth = cmd["depth"] if "depth" in cmd else None
-                        depth = int(depth)
+                        depth = int(cmd["depth"]) if "depth" in cmd else None
+                        # depth = int(depth)
                         # for handler in self.handlers:
                         # 	if isinstance(handler, InMemoryHandler):
                         # 		inmemory_handler = handler

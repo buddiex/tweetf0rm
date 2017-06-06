@@ -7,13 +7,14 @@ import copy, time
 from tweetf0rm.utils import full_stack, get_keys_by_min_value, format_proxy_list
 from tweetf0rm.proxies import proxy_checker
 from process.twitter_crawler import TwitterCrawler
-from tweetf0rm import logger
+import logging
 from handler import create_handlers
 from tweetf0rm.redis_helper import NodeCoordinator, CrawlerQueue
 from operator import itemgetter
 
 control_cmds = ['TERMINATE', 'CRAWLER_FLUSH', 'CRAWLER_FAILED']
 
+logger = logging.getLogger(__name__)
 
 class Scheduler(object):
     def __init__(self, node_id, config={}, proxies=[]):
